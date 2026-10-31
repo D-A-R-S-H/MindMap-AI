@@ -1,72 +1,48 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..mastery import get_level
 from ..models import Concept, Mastery, Misconception, Student
-from ..schemas import (
-    ConceptAverage,
-    MisconceptionCount,
-    StudentAttention,
-    TeacherAnalyticsResponse,
-)
+from ..schemas import ConceptAverage, MisconceptionCount, StudentRow, TeacherAnalyticsResponse
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher"])
 
-ATTENTION_THRESHOLD = 60  # students with average mastery below this need attention
+NEEDS_TEACHING_BELOW = 55  # class average under this means the topic needs re-teaching
 
 
 @router.get("/analytics", response_model=TeacherAnalyticsResponse)
 def analytics(db: Session = Depends(get_db)):
-    class_average = db.scalar(select(func.avg(Mastery.score))) or 0
-
-    concept_rows = db.execute(
-        select(Concept.name, func.avg(Mastery.score))
-        .join(Mastery, Mastery.concept_id == Concept.id)
-        .group_by(Concept.name)
-        .order_by(Concept.name)
-    ).all()
-
-    misconception_rows = db.execute(
-        select(Misconception.description, func.count(Misconception.id))
-        .group_by(Misconception.description)
-        .order_by(func.count(Misconception.id).desc())
-        .limit(5)
-    ).all()
-
-    # One row per (student, concept) so we can group in Python
-    student_rows = db.execute(
-        select(Student.id, Student.name, Concept.name, Mastery.score)
-        .select_from(Student)
-        .join(Mastery, Mastery.student_id == Student.id)
+    rows = db.execute(
+        select(Mastery, Concept.name, Student.name)
         .join(Concept, Mastery.concept_id == Concept.id)
-    ).all()
+        .join(Student, Mastery.student_id == Student.id)
+        .where(Mastery.attempt_count > 0)).all()
 
-    by_student: dict[int, dict] = {}
-    for student_id, student_name, concept_name, score in student_rows:
-        entry = by_student.setdefault(
-            student_id, {"name": student_name, "scores": [], "weak": []}
-        )
-        entry["scores"].append(score)
-        if get_level(score) == "Weak":
-            entry["weak"].append(concept_name)
+    by_concept: dict[str, list[float]] = defaultdict(list)
+    by_student: dict[str, list[tuple[float, str]]] = defaultdict(list)
+    for m, cname, sname in rows:
+        by_concept[cname].append(m.score)
+        by_student[sname].append((m.score, cname))
 
-    attention = []
-    for student_id, entry in by_student.items():
-        average = sum(entry["scores"]) / len(entry["scores"])
-        if average < ATTENTION_THRESHOLD:
-            attention.append(StudentAttention(
-                student_id=student_id,
-                name=entry["name"],
-                average_mastery=round(average, 1),
-                weak_concepts=entry["weak"],
-            ))
-    attention.sort(key=lambda s: s.average_mastery)
+    concepts = sorted((ConceptAverage(name=n, avg_mastery=round(sum(v) / len(v), 1))
+                       for n, v in by_concept.items()), key=lambda c: c.avg_mastery)
+    students = sorted((StudentRow(name=n, avg_mastery=round(sum(s for s, _ in v) / len(v), 1),
+                                  weakest_concept=min(v)[1]) for n, v in by_student.items()),
+                      key=lambda s: s.avg_mastery)
+    all_scores = [m.score for m, _, _ in rows]
+
+    misc = db.execute(
+        select(Misconception.description, func.count(func.distinct(Misconception.student_id)))
+        .group_by(Misconception.description)
+        .order_by(func.count(func.distinct(Misconception.student_id)).desc()).limit(6)).all()
 
     return TeacherAnalyticsResponse(
-        class_average_mastery=round(class_average, 1),
-        concept_averages=[ConceptAverage(concept=n, average_mastery=round(a, 1)) for n, a in concept_rows],
-        common_misconceptions=[MisconceptionCount(description=d, count=c) for d, c in misconception_rows],
-        students_needing_attention=attention,
+        class_avg_mastery=round(sum(all_scores) / len(all_scores), 1) if all_scores else 0.0,
+        concepts=concepts,
+        common_misconceptions=[MisconceptionCount(text=t, count=c) for t, c in misc],
+        students=students,
+        needs_teaching=[c.name for c in concepts if c.avg_mastery < NEEDS_TEACHING_BELOW],
     )

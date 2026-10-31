@@ -32,7 +32,7 @@ class Question(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"))
     text: Mapped[str] = mapped_column(Text)
-    difficulty: Mapped[str] = mapped_column(String(20))  # easy / medium / hard
+    difficulty: Mapped[int] = mapped_column(Integer, default=1)  # 1 easy, 2 medium, 3 hard
     expected_answer: Mapped[str] = mapped_column(Text)
     key_concepts: Mapped[list] = mapped_column(JSON, default=list)
     is_diagnostic: Mapped[bool] = mapped_column(default=False)
@@ -70,7 +70,7 @@ class Misconception(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"))
     concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"))
-    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id"))
+    attempt_id: Mapped[int | None] = mapped_column(ForeignKey("attempts.id"), nullable=True)
     description: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

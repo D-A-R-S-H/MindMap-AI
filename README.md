@@ -1,33 +1,31 @@
-# Mindmap AI
+# MindMap AI
 
-An AI-powered learning platform that evaluates students' understanding rather than
-matching answers to a textbook.
+Adaptive, voice-first AI study tutor. Students dictate answers (Wispr Flow works in any text box;
+there is no direct Wispr API integration) and Gemini evaluates understanding, not wording.
+Demo content: Class 10 Physics, Light: Reflection and Refraction.
 
-## Run the backend
-
-```
+## Run the backend (port 8000)
+```bash
 cd backend
-python -m venv ..\.venv
-..\.venv\Scripts\activate
-python -m pip install -r requirements.txt
-copy .env.example .env      # then put your Gemini key in .env
-python -m uvicorn app.main:app --reload
+python -m venv venv
+venv\Scripts\activate          # Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env         # Mac/Linux: cp .env.example .env, then add GEMINI_API_KEY
+uvicorn app.main:app --reload --port 8000
 ```
+The database is created and seeded automatically on start. If you change `app/seed.py`,
+delete `backend/mindmap.db` and restart. API docs: http://localhost:8000/docs
+Without a key the app still works and clearly labels results as "Demo fallback evaluation".
 
-- API: http://127.0.0.1:8000 (interactive docs at /docs)
-- Run tests: `python -m pytest -v` (from the backend folder)
+Tests: `cd backend && python -m pytest`
 
-## Endpoints
+## Run the frontend (port 5173)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+`src/api/client.js` has `USE_MOCK`. `false` = real backend, `true` = fake data.
 
-| Method | Endpoint | Notes |
-| --- | --- | --- |
-| GET | /api/health | status, ai_mode |
-| GET | /api/questions | optional `?diagnostic=true`, `?concept=...` |
-| POST | /api/diagnostic/submit | body: student_id, answers[{question_id, answer_text}] |
-| POST | /api/evaluate-answer | body: student_id, question_id, answer_text |
-| GET | /api/student/progress | optional `?student_id=1` |
-| GET | /api/student/mastery | optional `?student_id=1` |
-| GET | /api/student/revisions | optional `?student_id=1` |
-| GET | /api/teacher/analytics | |
-
-No login in the MVP. The demo student has id 1.
+## Journey
+Diagnostic -> Speak & Recall -> AI evaluation -> mastery update -> next question + revision date.

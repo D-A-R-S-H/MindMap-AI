@@ -54,12 +54,16 @@ export default function Diagnostic() {
   const q = questions[index];
   const isLast = index === questions.length - 1;
   const value = answers[q.id] || "";
+  const answeredCount = Object.values(answers).filter((a) => a.trim()).length;
 
   const finish = async () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const payload = questions.map((x) => ({ question_id: x.id, answer_text: answers[x.id] || "" }));
+      // the backend rejects empty answers, so only send the questions that were answered
+      const payload = questions
+        .filter((x) => (answers[x.id] || "").trim())
+        .map((x) => ({ question_id: x.id, answer_text: answers[x.id].trim() }));
       setProfile(await submitDiagnostic(payload));
     } catch {
       setSubmitError("Could not submit the diagnostic. Please try again.");
@@ -85,6 +89,9 @@ export default function Diagnostic() {
           className="mt-4 w-full min-h-[160px] rounded-xl border border-slate-200 p-4 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
         {submitError && <p className="mt-2 text-sm text-red-600">{submitError}</p>}
+        <p className="mt-2 text-xs text-slate-400">
+          {answeredCount} of {questions.length} answered. You can skip questions you don't know.
+        </p>
         <div className="mt-4 flex justify-between">
           <button
             onClick={() => setIndex(index - 1)}
@@ -94,7 +101,11 @@ export default function Diagnostic() {
             Back
           </button>
           {isLast ? (
-            <button onClick={finish} className="rounded-xl bg-indigo-600 px-6 py-2.5 font-medium text-white hover:bg-indigo-700">
+            <button
+              onClick={finish}
+              disabled={answeredCount === 0}
+              className="rounded-xl bg-indigo-600 px-6 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
               Finish & see profile
             </button>
           ) : (
