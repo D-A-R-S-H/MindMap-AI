@@ -1,6 +1,8 @@
 import os
-
+from .database import Base, engine
+from . import models 
 from dotenv import load_dotenv
+Base.metadata.create_all(bind=engine)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
