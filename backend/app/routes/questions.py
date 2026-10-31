@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,25 +13,26 @@ router = APIRouter(prefix="/api", tags=["questions"])
 
 @router.get("/questions", response_model=list[QuestionOut])
 def get_questions(
-    diagnostic: bool | None = None,
-    concept: str | None = None,
+    type: Literal["diagnostic", "recall"] | None = None,
+    concept_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     stmt = select(Question, Concept.name).join(Concept, Question.concept_id == Concept.id)
-
-    if diagnostic is not None:
-        stmt = stmt.where(Question.is_diagnostic == diagnostic)
-    if concept:
-        stmt = stmt.where(Concept.name == concept)
+    if type == "diagnostic":
+        stmt = stmt.where(Question.is_diagnostic.is_(True))
+    elif type == "recall":
+        stmt = stmt.where(Question.is_diagnostic.is_(False))
+    if concept_id is not None:
+        stmt = stmt.where(Question.concept_id == concept_id)
 
     rows = db.execute(stmt.order_by(Question.id)).all()
-
     return [
         QuestionOut(
-            question_id=q.id,
-            concept=concept_name,
-            difficulty=q.difficulty,
+            id=q.id,
+            concept_id=q.concept_id,
+            concept_name=concept_name,
             question_text=q.text,
+            difficulty=q.difficulty,
             expected_answer=q.expected_answer,
             key_concepts=q.key_concepts,
         )

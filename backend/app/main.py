@@ -1,16 +1,17 @@
 import os
 
 from dotenv import load_dotenv
+
+load_dotenv()  # must run before the app modules read environment variables
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import models  # noqa: F401  (registers the tables with Base)
 from .database import Base, SessionLocal, engine
-from .routes import questions
 from .schemas import HealthResponse
 from .seed import seed_database
-from .routes import diagnostic, questions
-load_dotenv()
+from .routes import diagnostic, evaluate, questions, student, teacher
 
 Base.metadata.create_all(bind=engine)
 with SessionLocal() as db:
@@ -27,6 +28,9 @@ app.add_middleware(
 
 app.include_router(questions.router)
 app.include_router(diagnostic.router)
+app.include_router(evaluate.router)
+app.include_router(student.router)
+app.include_router(teacher.router)
 
 @app.get("/api/health", response_model=HealthResponse)
 def health():

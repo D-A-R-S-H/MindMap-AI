@@ -7,9 +7,9 @@ from .models import RevisionSchedule
 
 # level -> (days until revision, priority)
 REVISION_RULES = {
-    "Weak": (1, "high"),
-    "Developing": (3, "medium"),
-    "Strong": (7, "low"),
+    "weak": (1, "high"),
+    "developing": (3, "medium"),
+    "strong": (7, "low"),
 }
 
 

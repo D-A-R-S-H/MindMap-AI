@@ -2,12 +2,12 @@ from app.mastery import combined_score, get_alpha, get_level, update_mastery
 
 
 def test_level_boundaries():
-    assert get_level(0) == "Weak"
-    assert get_level(49.9) == "Weak"
-    assert get_level(50) == "Developing"
-    assert get_level(74.9) == "Developing"
-    assert get_level(75) == "Strong"
-    assert get_level(100) == "Strong"
+    assert get_level(0) == "weak"
+    assert get_level(49.9) == "weak"
+    assert get_level(50) == "developing"
+    assert get_level(74.9) == "developing"
+    assert get_level(75) == "strong"
+    assert get_level(100) == "strong"
 
 
 def test_combined_score_is_the_average():

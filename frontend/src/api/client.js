@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as mock from "./mockData";
 
-const USE_MOCK = true; // set to false when the backend is ready
+const USE_MOCK = false; // true = fake data (no backend needed), false = real backend
 const STUDENT_ID = 1;
 
 const http = axios.create({ baseURL: "/api" });
