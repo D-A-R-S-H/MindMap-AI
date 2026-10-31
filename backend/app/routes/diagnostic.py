@@ -7,6 +7,7 @@ from ..database import get_db
 from ..mastery import get_level
 from ..models import Attempt, Concept, Mastery, Question, Student
 from ..schemas import DiagnosticSubmitRequest, DiagnosticSubmitResponse, StudentProfile
+from ..revision import upsert_revision
 
 router = APIRouter(prefix="/api", tags=["diagnostic"])
 
@@ -59,6 +60,7 @@ def submit_diagnostic(payload: DiagnosticSubmitRequest, db: Session = Depends(ge
 
         concept_name = db.get(Concept, concept_id).name
         level = get_level(score)
+        upsert_revision(db, student.id, concept_id, level)
         if level == "Strong":
             strong.append(concept_name)
         elif level == "Weak":
