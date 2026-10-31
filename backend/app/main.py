@@ -9,7 +9,7 @@ from .database import Base, SessionLocal, engine
 from .routes import questions
 from .schemas import HealthResponse
 from .seed import seed_database
-
+from .routes import diagnostic, questions
 load_dotenv()
 
 Base.metadata.create_all(bind=engine)
@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(questions.router)
-
+app.include_router(diagnostic.router)
 
 @app.get("/api/health", response_model=HealthResponse)
 def health():
