@@ -1,13 +1,20 @@
 import os
-from .database import Base, engine
-from . import models 
+
 from dotenv import load_dotenv
-Base.metadata.create_all(bind=engine)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .schemas import HealthResponse
 
-load_dotenv()  # reads backend/.env into environment variables
+from . import models  # noqa: F401  (registers the tables with Base)
+from .database import Base, SessionLocal, engine
+from .routes import questions
+from .schemas import HealthResponse
+from .seed import seed_database
+
+load_dotenv()
+
+Base.metadata.create_all(bind=engine)
+with SessionLocal() as db:
+    seed_database(db)
 
 app = FastAPI(title="Mindmap AI API")
 
@@ -17,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(questions.router)
 
 
 @app.get("/api/health", response_model=HealthResponse)
